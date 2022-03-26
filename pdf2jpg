@@ -1,0 +1,107 @@
+#!/bin/bash
+cd $tempDir
+for file in *;
+do
+        if [[ "$file" =~ ( |\') ]]; then
+               mv "$file" `echo $file | tr ' ' '_'` ;
+        fi
+done
+############################################################
+# Process the input options. Add options as needed.        #
+############################################################
+# Get the options
+while getopts ":hpj" option; do
+   case $option in
+      h) # display Help
+         echo "Welcome To The Help Dialog!"
+	 echo -e "    -h\n      Brings up the Help Dialog; but you already know that :p"
+	 echo -e "    -p\n      Converts pdfs into multiple pngs; once for each page of the originating pdf"
+	 echo -e "    -j\n      Converts pdfs into multiple jpgs; once for each page of the originating pdf"
+	 echo -e "    No Argument\n      Converts pdfs into multiple pngs and jpgs; once for each page of the originating pdf"
+         exit;;
+      p) #png only
+         echo "Converting to png!"
+	 RESULTS=$(ls -v | grep '.pdf')
+	 for i in $RESULTS;
+	 do
+	 	 DIR=$(echo $i | cut -d. -f1)
+                 mkdir "$DIR"
+                 pdftk $i burst output ./"$DIR"/pg_%04d.pdf
+                 ls -v ./"$DIR"/*.pdf | xargs -L1 -I {}  inkscape {} -z --export-dpi=300 --export-area-drawing --export-png={}.png
+                 echo -e "\n\nCorrecting '$i' filenames now!";
+                 cd $DIR
+                 P_RESULTS=$(ls *.png)
+                 for j in $P_RESULTS;
+                 do
+                         TMP=$(echo -e $j | cut -d. -f1)
+                         #echo -e "$TMP"
+                         mv $j $TMP.png
+                 done
+                 cd ../
+	 done
+         exit;;
+      j) #jpg only... kinda not rly. inkscape has to convert to png first so we just silence the png related output
+	 echo "Converting to jpg!"
+	 RESULTS=$(ls -v | grep '.pdf')
+         for i in $RESULTS;
+         do
+                 DIR=$(echo $i | cut -d. -f1)
+                 #echo -e "$DIR"
+                 mkdir "$DIR"
+                 pdftk $i burst output ./"$DIR"/pg_%04d.pdf
+                 ls -v ./"$DIR"/*.pdf | xargs -L1 -I {}  inkscape {} -z --export-dpi=300 --export-area-drawing --export-png={}.png > /dev/null
+                 #echo -e "\n\nConverting '$i' pages to jpg now!";
+                 ls ./"$DIR"/p*.png | xargs -L1 -I {} convert {}  -quality 100 -density 300 {}.jpg
+                 echo -e "\n\nCorrecting '$i' filenames now!";
+                 cd $DIR
+                 P_RESULTS=$(ls *.png)
+                 J_RESULTS=$(ls *.jpg)
+                 for j in $P_RESULTS;
+                 do
+			 rm $j
+                 done
+                 for k in $J_RESULTS;
+                 do
+                         TMP=$(echo -e $k | cut -d. -f1)
+                         #echo -e "$TMP"
+                         mv $k $TMP.jpg
+                 done
+                 cd ../
+         done
+         exit;;
+   esac
+done
+
+if [ -z "$1" ]; then
+	echo -e "Converting to png and jpg";
+	RESULTS=$(ls -v | grep '.pdf')
+	for i in $RESULTS;
+	do
+		DIR=$(echo $i | cut -d. -f1)
+		#echo -e "$DIR"
+		mkdir "$DIR"
+		pdftk $i burst output ./"$DIR"/pg_%04d.pdf
+		ls -v ./"$DIR"/*.pdf | xargs -L1 -I {}  inkscape {} -z --export-dpi=300 --export-area-drawing --export-png={}.png
+		echo -e "\n\nConverting '$i' pages to jpg now!";
+		ls ./"$DIR"/p*.png | xargs -L1 -I {} convert {}  -quality 100 -density 300 {}.jpg
+		echo -e "\n\nCorrecting '$i' filenames now!";
+		cd $DIR 
+		P_RESULTS=$(ls *.png)
+		J_RESULTS=$(ls *.jpg)
+		for j in $P_RESULTS;
+		do
+			TMP=$(echo -e $j | cut -d. -f1)
+			#echo -e "$TMP"
+			mv $j $TMP.png
+		done
+		for k in $J_RESULTS;
+		do
+			TMP=$(echo -e $k | cut -d. -f1)
+			#echo -e "$TMP"
+			mv $k $TMP.jpg
+		done
+		cd ../
+	done
+else
+	echo -e "ERROR: Unregognized flag variable!!!\nVariable recieved: $1\nFor usage information, Please run: pdf2jpg -h\n"
+fi

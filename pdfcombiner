@@ -1,0 +1,20 @@
+#!/bin/bash
+flname=$1
+cd $tempDir
+for file in *; 
+do
+	if [[ "$file" =~ ( |\') ]]; then
+		mv "$file" `echo $file | tr ' ' '_'` ; 
+	fi
+done
+##RESULTS=$(ls -tcr $tempDir | grep '.pdf');
+RESULTS=$(ls -v $tempDir | grep '.pdf');
+if [ -z "$1" ]; then
+	echo -e "filename is unset!";
+	pdftk $tempDir$RESULTS cat output $tempDircombined.pdf
+	##pdftk $tempDir*.pdf output $tempDircombined.pdf	
+else 
+	echo -e "filename is set to: '$flname'";
+	pdftk $tempDir$RESULTS cat output $tempDir${flname}.pdf
+	##pdftk $tempDir*.pdf output $tempDir${flname}.pdf
+fi

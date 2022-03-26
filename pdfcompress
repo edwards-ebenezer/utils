@@ -1,0 +1,59 @@
+#!/bin/bash
+cd $tempDir
+for file in *;
+do
+        if [[ "$file" =~ ( |\') ]]; then
+               mv "$file" `echo $file | tr ' ' '_'` ;
+        fi
+done
+############################################################
+# Process the input options. Add options as needed.        #
+############################################################
+# Get the options
+while getopts ":hpj" option; do
+   case $option in
+      h) # display Help
+         echo -e "Welcome To The Help Dialog!\nThis script batch compresses PDFs; it has 2 levels of compression, Medium && High; defaulting to Medium"
+	 echo -e "The following flag variables are accepted; if you provide none, medium compression will be used!"
+	 echo -e "    -h\n      Brings up the Help Dialog; but you already know that :p"
+	 echo -e "    -H\n      Compresses pdfs utilizing high levels of compression"
+	 echo -e "    -M\n      Compresses pdfs utilizing medium levels of compression"
+	 echo -e "    No Argument\n      CoCompresses pdfs utilizing medium levels of compression"
+	 echo -e "\n    -i\n      Installs any prerequisit packages"
+         exit;;
+      H) #png only
+         echo "Compressing PDFs! - High Compression"
+	 for file in *;
+	 do
+		 if [ "${file: -4}" == ".pdf" ]; then
+			 time gs -sDEVICE=pdfwrite -dPDFSETTINGS=/screen -dNOPAUSE -dBATCH -sOutputFile=compressed_high_$file.pdf $file
+		 fi
+	 done
+         exit;;
+      M) #jpg only... kinda not rly. inkscape has to convert to png first so we just silence the png related output
+	 echo "Compressing PDFs! - Medium Compression"
+	 for file in *;
+	 do
+		 if [ "${file: -4}" == ".pdf" ]; then
+			 time gs -sDEVICE=pdfwrite -dPDFSETTINGS=/ebook -dNOPAUSE -dBATCH -sOutputFile=compressed_med_$file $file
+		 fi
+	 done
+         exit;;
+      i) #Install prereq pkgs
+         sudo apt update && sudo apt install gs time
+	 echo -e "\n\nPlease run the program again in non-install mode"
+	 exit;;
+   esac
+done
+
+if [ -z "$1" ]; then
+	echo -e "Compressing PDFs! - Medium Compression";
+	for file in *;
+	do
+		if [ "${file: -4}" == ".pdf" ]; then
+			time gs -sDEVICE=pdfwrite -dPDFSETTINGS=/ebook -dNOPAUSE -dBATCH -sOutputFile=compressed_$file $file
+		fi
+	done
+else
+	echo -e "ERROR: Unregognized flag variable!!!\nVariable recieved: $1\nFor usage information, Please run: pdfcompress -h\n"
+fi

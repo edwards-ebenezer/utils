@@ -1,4 +1,5 @@
 #!/bin/bash
+source vars.txt
 cd $tempDir
 for file in *;
 do

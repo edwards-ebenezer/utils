@@ -11,13 +11,14 @@ done
 # Process the input options. Add options as needed.        #
 ############################################################
 # Get the options
-while getopts ":hpj" option; do
+while getopts ":hpji" option; do
    case $option in
       h) # display Help
          echo "Welcome To The Help Dialog!"
 	 echo -e "    -h\n      Brings up the Help Dialog; but you already know that :p"
 	 echo -e "    -p\n      Converts pdfs into multiple pngs; once for each page of the originating pdf"
 	 echo -e "    -j\n      Converts pdfs into multiple jpgs; once for each page of the originating pdf"
+	 echo -e "    -i\n      Installs prerequisite packages!"
 	 echo -e "    No Argument\n      Converts pdfs into multiple pngs and jpgs; once for each page of the originating pdf"
          exit;;
       p) #png only
@@ -26,19 +27,13 @@ while getopts ":hpj" option; do
 	 for i in $RESULTS;
 	 do
 	 	 DIR=$(echo $i | cut -d. -f1)
-                 mkdir "$DIR"
-                 pdftk $i burst output ./"$DIR"/pg_%04d.pdf
-                 ls -v ./"$DIR"/*.pdf | xargs -L1 -I {}  inkscape {} -z --export-dpi=300 --export-area-drawing --export-png={}.png
-                 echo -e "\n\nCorrecting '$i' filenames now!";
-                 cd $DIR
-                 P_RESULTS=$(ls *.png)
-                 for j in $P_RESULTS;
-                 do
-                         TMP=$(echo -e $j | cut -d. -f1)
-                         #echo -e "$TMP"
-                         mv $j $TMP.png
-                 done
-                 cd ../
+                 mkdir "$DIR" 
+		 COUNT=$(qpdf --show-npages $i)
+		 for ((k = 1; k<=$COUNT; k++)); do
+			 echo converting page: [$k/$COUNT]
+			 inkscape $i --pdf-page=$k --export-type=png --export-filename=$k
+		 done
+		 mv *.png $DIR
 	 done
          exit;;
       j) #jpg only... kinda not rly. inkscape has to convert to png first so we just silence the png related output
@@ -47,28 +42,32 @@ while getopts ":hpj" option; do
          for i in $RESULTS;
          do
                  DIR=$(echo $i | cut -d. -f1)
-                 #echo -e "$DIR"
                  mkdir "$DIR"
-                 pdftk $i burst output ./"$DIR"/pg_%04d.pdf
-                 ls -v ./"$DIR"/*.pdf | xargs -L1 -I {}  inkscape {} -z --export-dpi=300 --export-area-drawing --export-png={}.png > /dev/null
-                 #echo -e "\n\nConverting '$i' pages to jpg now!";
-                 ls ./"$DIR"/p*.png | xargs -L1 -I {} convert {}  -quality 100 -density 300 {}.jpg
-                 echo -e "\n\nCorrecting '$i' filenames now!";
+                 COUNT=$(qpdf --show-npages $i)
+		 for ((k = 1; k<=$COUNT; k++)); do
+			 echo converting page: [$k/$COUNT]
+			 inkscape $i --pdf-page=$k --export-type=png --export-filename=$k
+		 done
+		 mv *.png $DIR
+                 ls ./"$DIR"/*.png | xargs -I {} convert {} -quality 100 -density 300 {}.jpg
                  cd $DIR
                  P_RESULTS=$(ls *.png)
-                 J_RESULTS=$(ls *.jpg)
-                 for j in $P_RESULTS;
+                 for p in $P_RESULTS;
+		 do
+		 	rm $p
+		 done
+		 J_RESULTS=$(ls *.jpg)
+                 for j in $J_RESULTS
                  do
-			 rm $j
-                 done
-                 for k in $J_RESULTS;
-                 do
-                         TMP=$(echo -e $k | cut -d. -f1)
-                         #echo -e "$TMP"
-                         mv $k $TMP.jpg
+                        TMP=$(echo -e $j | cut -d. -f1)
+                        mv $j $TMP.jpg
                  done
                  cd ../
          done
+         exit;;
+      i) #Install mode curently only works for Arch based distros with yay installed.
+	 echo "Entering Install Mode!"
+	 yay -Syu inkscape qpdf
          exit;;
    esac
 done
@@ -79,27 +78,20 @@ if [ -z "$1" ]; then
 	for i in $RESULTS;
 	do
 		DIR=$(echo $i | cut -d. -f1)
-		#echo -e "$DIR"
 		mkdir "$DIR"
-		pdftk $i burst output ./"$DIR"/pg_%04d.pdf
-		ls -v ./"$DIR"/*.pdf | xargs -L1 -I {}  inkscape {} -z --export-dpi=300 --export-area-drawing --export-png={}.png
-		echo -e "\n\nConverting '$i' pages to jpg now!";
-		ls ./"$DIR"/p*.png | xargs -L1 -I {} convert {}  -quality 100 -density 300 {}.jpg
-		echo -e "\n\nCorrecting '$i' filenames now!";
-		cd $DIR 
-		P_RESULTS=$(ls *.png)
+		COUNT=$(qpdf --show-npages $i)
+		for ((k = 1; k<=$COUNT; k++)); do
+			echo converting page: [$k/$COUNT]
+			inkscape $i --pdf-page=$k --export-type=png --export-filename=$k
+		done
+		mv *.png $DIR
+                ls ./"$DIR"/*.png | xargs -I {} convert {} -quality 100 -density 300 {}.jpg
+		cd $DIR
 		J_RESULTS=$(ls *.jpg)
-		for j in $P_RESULTS;
+		for j in $J_RESULTS
 		do
 			TMP=$(echo -e $j | cut -d. -f1)
-			#echo -e "$TMP"
-			mv $j $TMP.png
-		done
-		for k in $J_RESULTS;
-		do
-			TMP=$(echo -e $k | cut -d. -f1)
-			#echo -e "$TMP"
-			mv $k $TMP.jpg
+			mv $j $TMP.jpg
 		done
 		cd ../
 	done

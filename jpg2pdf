@@ -1,34 +1,29 @@
 #!/bin/bash
 source vars.txt
 cd $tempDir
-for file in *;
-do
-        if [[ "$file" =~ ( |\') ]]; then
-               mv "$file" `echo $file | tr ' ' '_'` ;
+for file in *; do
+    #if [[ "$file" =~ [[:space:]] ]]; then
+    #    mv "$file" "$(echo "$file" | tr ' ' '_')"
+    #fi
+    if [[ "${file: -4}" == ".png" ]]; then
+        mogrify -format jpg "$file"
+        jpegFiles+=("${file%.png}.jpg")
+    elif file_type=$(file -b --mime-type "$file"); then
+        if [[ "$file_type" == "image/jpeg" ]]; then
+            jpegFiles+=("$file")
         fi
-	#if [[ $file == *.png ]]; then
-	if [ "${file: -4}" == ".png" ]; then
-		mogrify -format jpg $file
-	fi
+    fi
 done
-RESULTS=$(ls -v $tempDir | grep -i '.jpg');
+if [ "${#jpegFiles[@]}" -eq 0 ]; then
+    echo "No JPEG files found."
+    exit 1
+fi
+RESULTS=$(IFS=' '; echo "${jpegFiles[*]}")
 if [ -z "$1" ]; then
 	echo -e "filename is unset!";
-	img2pdf $tempDir/$RESULTS --output $tempDir/combined.pdf
-	#img2pdf $tempDir/TMP/*jp* --output $tempDir/combined.pdf
+	img2pdf "${jpegFiles[@]}" --output "$tempDir/combined.pdf"
 else
 	flname=$1
 	echo -e "filename is set to: '$flname'";
-	img2pdf $tempDir/$RESULTS --output $tempDir/${flname}.pdf
+	img2pdf "${jpegFiles[@]}" --output "$tempDir/${flname}.pdf"
 fi
-#if [ -z "$1" ]; then
-#	flname=combined
-#else
-#	flname=$1
-#fi
-#for file in *;
-#do
-#	if [ "${file: -4}" == ".jpg" ] || [ "${file: -4}" == ".JPG" ]; then
-#		img2pdf $tempDir/$file --output $tempDir/${flname}.pdf
-#	fi
-#done

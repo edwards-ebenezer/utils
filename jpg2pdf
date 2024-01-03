@@ -1,7 +1,8 @@
 #!/bin/bash
 source vars.txt
 cd $tempDir
-for file in *; do
+files=($(ls -v *))
+for file in "${files[@]}"; do
     #if [[ "$file" =~ [[:space:]] ]]; then
     #    mv "$file" "$(echo "$file" | tr ' ' '_')"
     #fi
